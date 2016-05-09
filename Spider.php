@@ -13,7 +13,8 @@ class Spider{
     public $lb;
 
     function __construct($username, $password){
-        $this->cookie_file_path = dirname(__FILE__).'/cookie.txt';
+		$this->cookie_file_path = dirname(__FILE__).'/cookie.txt';
+		echo $this->cookie_file_path;
         $this->lb = ((PHP_SAPI == "cli") ? "\n" : "<br />");
         if(file_exists($this->cookie_file_path) && (time() - filemtime($this->cookie_file_path) < 600)){
             echo (filemtime($this->cookie_file_path) - time()) . '检测到cookie' . $this->lb;
@@ -104,7 +105,7 @@ class Spider{
         preg_match($regex, $result, $match);
         //已定义为$MAGNET_LINK常量
         // $regex2 = '|.*<a\shref="(magnet:.*)"\stype="magnet".*<\/a>|sU';
-        var_dump($match);
+        // var_dump($match);
         $link = array();
         if($link_type == 'ed2k'){
             preg_match(Regex::$ED2K_LINK, $match[4], $link);
@@ -137,7 +138,7 @@ class Spider{
         $regex = '|<li\sclass="clearfix"\sformat="' . $format . '"\sseason="' . $season . '".*>.*<a\stitle=.*\sitemid="(.*)">(.*)<\/a>.*<font.*>(.*)<\/font>(.*)<\/li>|sU';
         $matches = array();
         preg_match_all($regex, $result, $matches);
-        var_dump($matches);
+       // var_dump($matches);
         $links = array('season' => $season, 'links' => array());
         $type = '';
         if($link_type == 'ed2k'){
@@ -165,7 +166,77 @@ class Spider{
             return FALSE;
         }
         return $rtn;
-    }
+	}
+	public function go2(){
+		if($this->login_status == FALSE){
+            echo '  未登录状态，无法获取资源列表！' . $this->lb;
+            return;
+        }
+        $options = array(CURLOPT_RETURNTRANSFER => TRUE,
+                        CURLOPT_COOKIEFILE => $this->cookie_file_path
+                    );
+        $ch = curl_init('http://www.zimuzu.tv/resource/list/10733');
+        curl_setopt_array($ch, $options);
+        $result = curl_exec($ch);
+        curl_close($ch);
+	
+		$regex = '|<li\sclass="clearfix"\sformat="(.*)"\sseason="(.*)"\sepisode="(.*)".*>.*<a\stitle=.*\sitemid="(.*)">(.*)<\/a>.*<font.*>(.*)<\/font>(.*)<\/li>|sU';
+        $matches = array();
+        preg_match_all($regex, $result, $matches);
+        //var_dump($matches);
+       // $links = array('season' => $season, 'links' => array());
+		for($i=0;$i<count($matches[4]);$i++){
+            preg_match(Regex::$ALL_LINK, $matches[7][$i], $link);
+			//var_dump($link);
+			$items = array('itemid' => $matches[4][$i],
+						  'season' => $matches[2][$i],
+						  'episode' => $matches[3][$i],
+						  'title' => $matches[5][$i],
+						  'size' => $matches[6][$i],
+						  'format' => $matches[1][$i],
+						  'link' => array($link[2] => $link[1]));
+			print_r($items);
+
+		}
+        //foreach($matches[7] as $match){
+          //  preg_match(Regex::$ALL_LINK, $match, $link);
+			//$links['links'][] = $link[1];
+			//echo $link[1]."\n".$link[2]."\n";
+		//}
+	}
+	/**
+	 * 获取剧集主页链接
+	 * @param  string $url 基础链接
+	 * @return array       传入链接页面中的剧集链接
+	 */
+	public function resource_list($url='http://www.zimuzu.tv/eresourcelist'){
+		if($this->login_status == FALSE){
+            echo '  未登录状态，无法获取资源列表！' . $this->lb;
+            return;
+		}  		
+        $options = array(CURLOPT_RETURNTRANSFER => TRUE,
+                        CURLOPT_COOKIEFILE => $this->cookie_file_path
+                    );
+        $ch = curl_init($url);
+		curl_setopt_array($ch, $options);
+        $result = curl_exec($ch);
+        curl_close($ch);
+	
+		$regex = '|.*<a href="(.*)".*>|sU';
+		preg_match_all($regex, $result, $matches);
+		//var_dump($matches);
+		$url_list = $matches[1];
+		foreach($url_list as $key => &$value){
+			if(!substr_count($value, 'resource/')){
+				unset($url_list[$key]);
+			}
+			if(!substr_count($value, 'http://')){
+				$value = 'http://www.zimuzu.tv' . $value;
+			}
+		}
+		return $url_list;
+	
+	}
 
     /**
      * 获取剧集信息，包括名称、导演、主演、图片等
