@@ -167,7 +167,7 @@ class Spider{
         }
         return $rtn;
 	}
-	public function go2(){
+	public function go2($url){
 		if($this->login_status == FALSE){
             echo '  未登录状态，无法获取资源列表！' . $this->lb;
             return;
@@ -175,7 +175,7 @@ class Spider{
         $options = array(CURLOPT_RETURNTRANSFER => TRUE,
                         CURLOPT_COOKIEFILE => $this->cookie_file_path
                     );
-        $ch = curl_init('http://www.zimuzu.tv/resource/list/10733');
+        $ch = curl_init($url);
         curl_setopt_array($ch, $options);
         $result = curl_exec($ch);
         curl_close($ch);
@@ -183,7 +183,7 @@ class Spider{
 		$regex = '|<li\sclass="clearfix"\sformat="(.*)"\sseason="(.*)"\sepisode="(.*)".*>.*<a\stitle=.*\sitemid="(.*)">(.*)<\/a>.*<font.*>(.*)<\/font>(.*)<\/li>|sU';
         $matches = array();
         preg_match_all($regex, $result, $matches);
-        //var_dump($matches);
+        var_dump($matches);
        // $links = array('season' => $season, 'links' => array());
 		for($i=0;$i<count($matches[4]);$i++){
             preg_match(Regex::$ALL_LINK, $matches[7][$i], $link);
@@ -207,7 +207,7 @@ class Spider{
 	/**
 	 * 获取剧集主页链接
 	 * @param  string $url 基础链接
-	 * @return array       传入链接页面中的剧集链接
+	 * @return array       传入链接页面中剧集链接包含的剧集id
 	 */
 	public function resource_list($url='http://www.zimuzu.tv/eresourcelist'){
 		if($this->login_status == FALSE){
@@ -222,16 +222,13 @@ class Spider{
         $result = curl_exec($ch);
         curl_close($ch);
 	
-		$regex = '|.*<a href="(.*)".*>|sU';
+		$regex = '|.*<a href=".*resource/(.*)".*>|sU';
 		preg_match_all($regex, $result, $matches);
 		//var_dump($matches);
-		$url_list = $matches[1];
+		$url_list = array_unique($matches[1]);
 		foreach($url_list as $key => &$value){
-			if(!substr_count($value, 'resource/')){
+			if(strlen($value) > 10){
 				unset($url_list[$key]);
-			}
-			if(!substr_count($value, 'http://')){
-				$value = 'http://www.zimuzu.tv' . $value;
 			}
 		}
 		return $url_list;
@@ -252,7 +249,38 @@ class Spider{
 ############################    工具方法    ######################
 ###################################################################
 
-    public function get_pic($itemid){}
+	public function get_pic($itemid){}
+	/**
+	 * 获取下载链接
+	 * @param string $text 要搜索的文本
+	 * @return array 每一项为array('itemid'  =>
+	 * 							   'season'  =>
+	 * 							   'episode' =>
+	 * 							   'title'   =>
+	 * 							   'size     => 
+	 * 							   'format'  => 
+	 * 							   'link'    => array(type => link))
+	 */
+	public function get_link_from_text($text){
+        $matches = array();
+        preg_match_all(Regex::LINK_LIST, $text, $matches);
+		$items = array();
+		if (empty($matches[4]))
+			return FALSE;
+		for($i=0;$i<count($matches[4]);$i++){
+            preg_match(Regex::$ALL_LINK, $matches[7][$i], $link);
+			//var_dump($link);
+			$items[] = array('itemid' => $matches[4][$i],
+						  'season' => $matches[2][$i],
+						  'episode' => $matches[3][$i],
+						  'title' => $matches[5][$i],
+						  'size' => $matches[6][$i],
+						  'format' => $matches[1][$i],
+						  'link' => empty($link) ? NULL : array($link[2] => $link[1]));
 
+		}	
+		//print_r($items);
+		return $items;
+	}
 }
 
