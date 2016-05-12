@@ -5,12 +5,12 @@ include_once('regex.php');
 $redis = new Redis();
 $redis->connect('127.0.0.1');
 $redis->info();
-$fuck = new Spider('小黑机', 'WZRJJ888');
+$fuck = new Spider('小灰机灰上天', 'WZRJJ888');
 
 $mh = curl_multi_init();
 
 while($redis->exists('resource')){
-	$resource_list = $redis->lRange('resource', 0, 20);
+	$resource_list = $redis->lRange('resource', 0, 10);
 	if (empty($resource_list)) {
 		echo "no value";
 		exit;
@@ -42,12 +42,14 @@ while($redis->exists('resource')){
 		curl_multi_remove_handle($mh, $done['handle']);
 		curl_close($done['handle']);
 		//$url_list = array_merge($url_list, $url_child_list);
-
-		var_dump(json_encode($items),JSON_UNESCAPED_UNICODE);
-		$redis->lPush('finished_resource', $current_resource_id);
+		$redis->rPush('item_info', json_encode($items, JSON_UNESCAPED_UNICODE));
+	//	var_dump(json_encode($items),JSON_UNESCAPED_UNICODE);
+		$redis->rPush('finished_resource', $current_resource_id);
 		//此处应注意，phpredis中的lrem方法与redis文档中的方法参数顺序是不一样的
 		$redis->lRem('resource', $current_resource_id, 0);
 	}
+	echo "当前已抓取" . $redis->lLen('finished_resource') . "条记录\n还剩" . $redis->lLen('resource') . "\n";
+
 }
-echo "结束了。。。。";
+echo "抓取链接结束了。。。。";
 

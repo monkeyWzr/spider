@@ -8,22 +8,26 @@ $fuck = new Spider('小黑机', 'WZRJJ888');
 $mh = curl_multi_init();
 
 //初始化resource键值，插入10个itemid
-$url_list = $fuck->resource_list();
-foreach($url_list as $resource){
-	$redis->rPush('resource', $resource);
-}
-var_dump($redis->lrange('resource', 0, -1));
+//$url_list = $fuck->resource_list();
+//foreach($url_list as $resource){
+//	$redis->rPush('resource', $resource);
+//}
+//var_dump($redis->lrange('resource', 0, -1));
 
 //初始偏移量
 $s = 0;
 $e = 10;
+$multi = 10;
 
 while(1){
 	//从resource列表中读取10个元素
-	$url_list = $redis->lRange('resource', $s, $e);
+	//$url_list = $redis->lRange('resource', $s, $e);
 	//初始化curl配置
-	foreach($url_list as $url){
-		$ch = curl_init("http://www.zimuzu.tv/resource/" . $url);
+	//foreach($url_list as $url){
+	$url_list = array();
+	for($i=$s; $i<$s+$multi; $i++){
+		//$ch = curl_init("http://www.zimuzu.tv/resource/" . $url);
+		$ch = curl_init("http://www.zimuzu.tv/eresourcelist?page={$i}&channel=tv&area=&category=&format=&year=&sort=rank");
 		$options = array(CURLOPT_RETURNTRANSFER => TRUE,
         	             CURLOPT_COOKIEFILE => dirname(__FILE__).'/cookie.txt'
 				 );
@@ -50,8 +54,9 @@ while(1){
 	
 	//读取文本流，匹配新的itemid
 	while ($done = curl_multi_info_read($mh)){
+		if(!$done) break;
 		$result = curl_multi_getcontent($done['handle']);
-		$regex = '|.*<a href=".*resource/(.*)".*>|sU';
+		$regex = '|.*<a href="http:.*resource/(.*)".*>|sU';
 		preg_match_all($regex, $result, $matches);
 		$url_child_list = array_unique($matches[1]);
 		foreach($url_child_list as $key => &$value){
@@ -72,8 +77,8 @@ while(1){
 		if (!in_array($resource, $finished))
 			$redis->rPush('resource', $resource);
 	}
-	echo "当前已抓取" . $redis->lLen('resource') . "条记录";
+	echo "当前已抓取" . $redis->lLen('resource') . "条记录\n";
 	//偏移量向右移动10位
-	$s = $e+1;
-	$e += 10;
+	$s += $multi;
+//	$e += 10;
 }

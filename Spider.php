@@ -272,7 +272,7 @@ class Spider{
 			//var_dump($link);
 			$items[] = array('itemid' => $matches[4][$i],
 						  'season' => $matches[2][$i],
-						  'episode' => $matches[3][$i],
+						  'episode' => isset($matches[3][$i]) ? $matches[3][$i] : 0,
 						  'title' => $matches[5][$i],
 						  'size' => $matches[6][$i],
 						  'format' => $matches[1][$i],
