@@ -241,9 +241,27 @@ class Spider{
      */
     public function get_info(){}
     public function search(){}
-
-
-
+	
+	/**
+	 * 获取今日更新列表
+	 *@return array resource_id => resource_name
+	 */
+	public static function get_schedule(){
+		$options = array(CURLOPT_RETURNTRANSFER => TRUE,
+                        //CURLOPT_COOKIEFILE => $this->cookie_file_path
+                    );
+        $ch = curl_init('http://www.zimuzu.tv/tv/eschedule');
+        curl_setopt_array($ch, $options);
+        $result = curl_exec($ch);
+        curl_close($ch);
+		$regex = '|<td\sclass="ihbg\scur">(.*)<\/td>|sU';
+		if(preg_match($regex, $result, $list_block)){
+			if(preg_match_all('|<a\shref=".*resource\/(.*)".*>(.*)<\/a>|sU', $list_block[1], $matches)){
+				$rtn = array_combine($matches[1], $matches[2]);
+			}
+		}
+		return $rtn;
+	}
 
 ##################################################################
 ############################    工具方法    ######################
