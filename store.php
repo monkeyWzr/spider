@@ -5,6 +5,8 @@ if ($mysqli->connect_error) {
 	die("Mysql数据库连接失败：" . $conn->connect_error);
 }
 
+$mysqli->query("SET NAMES 'utf8'");
+
 $redis = new Redis();
 $redis->connect('127.0.0.1');
 $redis->info();
